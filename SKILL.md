@@ -36,7 +36,7 @@ pear run . store1
 1. Run `pear run . store1`
 2. Choose **option 1)** → generates your peer identity (wallet)
 3. Copy the **Peer Writer key** shown in the Peer section
-4. Open `index.js` and replace `REPLACE_WITH_YOUR_PEER_WRITER_KEY` with that key
+4. Open `index.js` and replace `trac10sn2k6d3py0rswn5x2qsq5pk4waf7e5vxc048zp2lwq50r0j89tswu2net` with that key
 5. Type `/exit` and run again: `pear run . store1`
 6. In the terminal: `/add_admin --address <YourPeerAddress>`
 7. Enable others to join: `/set_auto_add_writers --enabled 1`
@@ -177,12 +177,12 @@ open  →  assigned  →  done
 ## Trac Address (for reward payouts)
 
 ```
-REPLACE_WITH_YOUR_TRAC_ADDRESS
+trac10sn2k6d3py0rswn5x2qsq5pk4waf7e5vxc048zp2lwq50r0j89tswu2net
 ```
 
 ---
 
 ## Repository
 
-- Fork: https://github.com/YOUR_USERNAME/intercom
+- Fork: https://github.com/0xbeejay20/intercom
 - Upstream: https://github.com/Trac-Systems/intercom

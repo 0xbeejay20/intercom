@@ -1,77 +1,117 @@
-# Intercom
+# TaskFlow — P2P Task Coordinator
 
-This repository is a reference implementation of the **Intercom** stack on Trac Network for an **internet of agents**.
+**TaskFlow** is a decentralized, gas-free task management app built on [Trac Network](https://tracsystems.io) using the [Intercom](https://github.com/Trac-Systems/intercom) stack and Pear Runtime.
 
-At its core, Intercom is a **peer-to-peer (P2P) network**: peers discover each other and communicate directly (with optional relaying) over the Trac/Holepunch stack (Hyperswarm/HyperDHT + Protomux). There is no central server required for sidechannel messaging.
+Multiple peers share a replicated task board over a P2P network. No server, no central database, no gas fees. Tasks are stored in a Trac smart contract and synced across all connected peers automatically.
 
-Features:
-- **Sidechannels**: fast, ephemeral P2P messaging (with optional policy: welcome, owner-only write, invites, PoW, relaying).
-- **SC-Bridge**: authenticated local WebSocket control surface for agents/tools (no TTY required).
-- **Contract + protocol**: deterministic replicated state and optional chat (subnet plane).
-- **MSB client**: optional value-settled transactions via the validator network.
+> Built for the [Intercom Vibe Competition](https://github.com/Trac-Systems/awesome-intercom)
 
-Additional references: https://www.moltbook.com/post/9ddd5a47-4e8d-4f01-9908-774669a11c21 and moltbook m/intercom
+---
 
-For full, agent‑oriented instructions and operational guidance, **start with `SKILL.md`**.  
-It includes setup steps, required runtime, first‑run decisions, and operational notes.
+## Trac Address (for reward payouts)
 
-## What this repo is for
-- A working, pinned example to bootstrap agents and peers onto Trac Network.
-- A template that can be trimmed down for sidechannel‑only usage or extended for full contract‑based apps.
-
-## How to use
-Use the **Pear runtime only** (never native node).  
-Follow the steps in `SKILL.md` to install dependencies, run the admin peer, and join peers correctly.
-
-## Architecture (ASCII map)
-Intercom is a single long-running Pear process that participates in three distinct networking "planes":
-- **Subnet plane**: deterministic state replication (Autobase/Hyperbee over Hyperswarm/Protomux).
-- **Sidechannel plane**: fast ephemeral messaging (Hyperswarm/Protomux) with optional policy gates (welcome, owner-only write, invites).
-- **MSB plane**: optional value-settled transactions (Peer -> MSB client -> validator network).
-
-```text
-                          Pear runtime (mandatory)
-                pear run . --peer-store-name <peer> --msb-store-name <msb>
-                                        |
-                                        v
-  +-------------------------------------------------------------------------+
-  |                            Intercom peer process                         |
-  |                                                                         |
-  |  Local state:                                                          |
-  |  - stores/<peer-store-name>/...   (peer identity, subnet state, etc)    |
-  |  - stores/<msb-store-name>/...    (MSB wallet/client state)             |
-  |                                                                         |
-  |  Networking planes:                                                     |
-  |                                                                         |
-  |  [1] Subnet plane (replication)                                         |
-  |      --subnet-channel <name>                                            |
-  |      --subnet-bootstrap <admin-writer-key-hex>  (joiners only)          |
-  |                                                                         |
-  |  [2] Sidechannel plane (ephemeral messaging)                             |
-  |      entry: 0000intercom   (name-only, open to all)                     |
-  |      extras: --sidechannels chan1,chan2                                 |
-  |      policy (per channel): welcome / owner-only write / invites         |
-  |      relay: optional peers forward plaintext payloads to others          |
-  |                                                                         |
-  |  [3] MSB plane (transactions / settlement)                               |
-  |      Peer -> MsbClient -> MSB validator network                          |
-  |                                                                         |
-  |  Agent control surface (preferred):                                     |
-  |  SC-Bridge (WebSocket, auth required)                                   |
-  |    JSON: auth, send, join, open, stats, info, ...                       |
-  +------------------------------+------------------------------+-----------+
-                                 |                              |
-                                 | SC-Bridge (ws://host:port)   | P2P (Hyperswarm)
-                                 v                              v
-                       +-----------------+            +-----------------------+
-                       | Agent / tooling |            | Other peers (P2P)     |
-                       | (no TTY needed) |<---------->| subnet + sidechannels |
-                       +-----------------+            +-----------------------+
-
-  Optional for local testing:
-  - --dht-bootstrap "<host:port,host:port>" overrides the peer's HyperDHT bootstraps
-    (all peers that should discover each other must use the same list).
+```
+REPLACE_WITH_YOUR_TRAC_ADDRESS
 ```
 
 ---
-If you plan to build your own app, study the existing contract/protocol and remove example logic as needed (see `SKILL.md`).
+
+## What It Does
+
+- **Create tasks** with title, description, priority (`low` / `normal` / `high` / `critical`), and tags
+- **Assign tasks** to any peer by their Trac address
+- **Mark tasks done** from any connected peer
+- **List & filter tasks** by status, priority, or assignee
+- **Works across peers** — all nodes stay in sync via P2P replication
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/YOUR_USERNAME/intercom
+cd intercom
+npm install -g pear
+npm install
+npm pkg set overrides.trac-wallet=1.0.1
+rm -rf node_modules package-lock.json
+npm install
+pear run . store1
+```
+
+On first run, follow the bootstrap setup in [SKILL.md](./SKILL.md).
+
+---
+
+## Usage
+
+```bash
+# Create a task
+/task_add --title "Write tests" --priority high --tags "dev,testing"
+
+# Assign it
+/task_assign --id 1 --to <peer_address>
+
+# Mark done
+/task_done --id 1
+
+# List open tasks
+/task_list --status open
+
+# List all critical tasks
+/task_list --priority critical
+
+# Get a specific task
+/task_get --id 1
+```
+
+All commands can also be sent as raw contract transactions:
+```bash
+/tx --command '{ "op": "task_add", "title": "Deploy to prod", "priority": "critical" }'
+```
+
+---
+
+## Architecture
+
+```
+taskflow/
+├── index.js               # Entry point — Trac peer setup
+├── contract/
+│   ├── contract.js        # Task state machine (add/assign/done/list/get)
+│   └── protocol.js        # CLI command → contract op mapping
+├── SKILL.md               # Agent instruction file
+├── README.md              # This file
+└── package.json
+```
+
+---
+
+## Why TaskFlow?
+
+Most task managers are centralized or require gas for every action. TaskFlow uses Trac Network's Intercom stack for:
+
+- **Zero-fee transactions** — no gas, no fees
+- **True P2P sync** — no cloud backend
+- **Agent-ready** — SKILL.md makes it easy for AI agents to manage tasks via natural language
+- **Composable** — can be extended with TNK payments, deadlines, or voting via Trac contracts
+
+---
+
+## Competition Links
+
+- This fork: https://github.com/YOUR_USERNAME/intercom
+- Upstream Intercom: https://github.com/Trac-Systems/intercom
+- Awesome Intercom list: https://github.com/Trac-Systems/awesome-intercom
+
+---
+
+## Proof
+
+See `screenshots/` folder for proof the app runs.
+
+---
+
+## License
+
+Based on the Intercom reference implementation by Trac Systems. MIT License.

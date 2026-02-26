@@ -11,7 +11,7 @@ Multiple peers share a replicated task board over a P2P network. No server, no c
 ## Trac Address (for reward payouts)
 
 ```
-REPLACE_WITH_YOUR_TRAC_ADDRESS
+trac10sn2k6d3py0rswn5x2qsq5pk4waf7e5vxc048zp2lwq50r0j89tswu2net
 ```
 
 ---
@@ -29,7 +29,7 @@ REPLACE_WITH_YOUR_TRAC_ADDRESS
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/intercom
+git clone https://github.com/0xbeejay20/intercom
 cd intercom
 npm install -g pear
 npm install
@@ -100,7 +100,7 @@ Most task managers are centralized or require gas for every action. TaskFlow use
 
 ## Competition Links
 
-- This fork: https://github.com/YOUR_USERNAME/intercom
+- This fork: https://github.com/0xbeejay20/intercom
 - Upstream Intercom: https://github.com/Trac-Systems/intercom
 - Awesome Intercom list: https://github.com/Trac-Systems/awesome-intercom
 

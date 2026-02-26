@@ -17,7 +17,7 @@
  */
 
 // ─── CONFIGURE YOUR BOOTSTRAP ADDRESS HERE ───────────────────────────────────
-const BOOTSTRAP_ADDRESS = 'REPLACE_WITH_YOUR_PEER_WRITER_KEY'
+const BOOTSTRAP_ADDRESS = 'trac10sn2k6d3py0rswn5x2qsq5pk4waf7e5vxc048zp2lwq50r0j89tswu2net'
 const APP_CHANNEL = 'taskflow-main-v1'          // must be exactly 32 chars padded
 // ──────────────────────────────────────────────────────────────────────────────
 

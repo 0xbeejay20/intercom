@@ -2,140 +2,135 @@
 
 /**
  * TaskFlow Contract
- * P2P Task Coordinator built on Intercom (Trac Network)
+ * P2P Task Coordinator on Trac Network
  *
- * Operations:
- *   task_add    – create a task
- *   task_assign – assign a task to a peer address
- *   task_done   – mark a task complete
- *   task_list   – list tasks (filter by status/assignee)
- *   task_get    – get a single task by id
+ * Supported ops:
+ *   task_add    - create a new task
+ *   task_assign - assign task to a peer
+ *   task_done   - mark task as complete
+ *   task_list   - list tasks with optional filters
+ *   task_get    - get a single task by id
  */
 
-class Contract {
-  constructor () {
-    this.tasks = {}      // id -> task object
-    this.nextId = 1
-  }
+const tasks = {}
+let next_id = 1
 
-  /**
-   * Called by the Trac runtime for every committed transaction.
-   * `tx` shape: { op, ...fields }
-   * `meta` shape: { sender: <peer writer key> }
-   */
-  async apply (tx, meta) {
-    const op = tx.op
+const contract = {}
 
-    if (op === 'task_add') {
-      return this._taskAdd(tx, meta)
-    } else if (op === 'task_assign') {
-      return this._taskAssign(tx, meta)
-    } else if (op === 'task_done') {
-      return this._taskDone(tx, meta)
-    } else if (op === 'task_list') {
-      return this._taskList(tx)
-    } else if (op === 'task_get') {
-      return this._taskGet(tx)
-    }
+contract.apply = async function (tx, meta) {
+  const op = (tx && tx.op) ? tx.op : null
 
-    return { error: 'unknown_op' }
-  }
+  if (op === 'task_add')    return _task_add(tx, meta)
+  if (op === 'task_assign') return _task_assign(tx, meta)
+  if (op === 'task_done')   return _task_done(tx, meta)
+  if (op === 'task_list')   return _task_list(tx)
+  if (op === 'task_get')    return _task_get(tx)
 
-  _taskAdd (tx, meta) {
-    const { title, desc = '', priority = 'normal', tags = '' } = tx
-    if (!title || title.trim().length === 0) {
-      return { error: 'title_required' }
-    }
-    const validPriorities = ['low', 'normal', 'high', 'critical']
-    if (!validPriorities.includes(priority)) {
-      return { error: 'invalid_priority', valid: validPriorities }
-    }
-
-    const id = this.nextId++
-    const task = {
-      id,
-      title: title.trim(),
-      desc: desc.trim(),
-      priority,
-      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-      status: 'open',
-      created_by: meta.sender,
-      assigned_to: null,
-      created_at: Date.now(),
-      updated_at: Date.now()
-    }
-    this.tasks[id] = task
-    return { ok: true, task }
-  }
-
-  _taskAssign (tx, meta) {
-    const { id, to } = tx
-    const task = this.tasks[id]
-    if (!task) return { error: 'not_found', id }
-    if (!to) return { error: 'to_required' }
-    if (task.status === 'done') return { error: 'task_already_done' }
-
-    task.assigned_to = to
-    task.status = 'assigned'
-    task.updated_at = Date.now()
-    return { ok: true, task }
-  }
-
-  _taskDone (tx, meta) {
-    const { id } = tx
-    const task = this.tasks[id]
-    if (!task) return { error: 'not_found', id }
-    if (task.status === 'done') return { error: 'task_already_done' }
-
-    task.status = 'done'
-    task.done_by = meta.sender
-    task.done_at = Date.now()
-    task.updated_at = Date.now()
-    return { ok: true, task }
-  }
-
-  _taskList (tx) {
-    const { status, assignee, priority, limit = 20 } = tx
-    let list = Object.values(this.tasks)
-
-    if (status) list = list.filter(t => t.status === status)
-    if (assignee) list = list.filter(t => t.assigned_to === assignee)
-    if (priority) list = list.filter(t => t.priority === priority)
-
-    // Sort: critical first, then by created_at desc
-    const pOrder = { critical: 0, high: 1, normal: 2, low: 3 }
-    list.sort((a, b) => {
-      const pd = pOrder[a.priority] - pOrder[b.priority]
-      if (pd !== 0) return pd
-      return b.created_at - a.created_at
-    })
-
-    return { ok: true, tasks: list.slice(0, Math.min(limit, 100)), total: list.length }
-  }
-
-  _taskGet (tx) {
-    const { id } = tx
-    const task = this.tasks[id]
-    if (!task) return { error: 'not_found', id }
-    return { ok: true, task }
-  }
-
-  /**
-   * Snapshot — Trac runtime calls this to persist state.
-   */
-  snapshot () {
-    return { tasks: this.tasks, nextId: this.nextId }
-  }
-
-  /**
-   * Restore from snapshot.
-   */
-  restore (snap) {
-    if (snap) {
-      this.tasks = snap.tasks || {}
-      this.nextId = snap.nextId || 1
-    }
-  }
+  return { error: 'unknown_op', op }
 }
 
-module.exports = Contract
+contract.snapshot = function () {
+  return { tasks, next_id }
+}
+
+contract.restore = function (snap) {
+  if (!snap) return
+  Object.assign(tasks, snap.tasks || {})
+  next_id = snap.next_id || 1
+}
+
+// ── Handlers ─────────────────────────────────────────────────────────────────
+
+function _task_add (tx, meta) {
+  const title    = (tx.title || '').trim()
+  const desc     = (tx.desc  || '').trim()
+  const priority = tx.priority || 'normal'
+  const tags     = tx.tags || ''
+
+  if (!title) return { error: 'title_required' }
+
+  const valid_priorities = ['low', 'normal', 'high', 'critical']
+  if (!valid_priorities.includes(priority)) {
+    return { error: 'invalid_priority', valid: valid_priorities }
+  }
+
+  const id   = next_id++
+  const task = {
+    id,
+    title,
+    desc,
+    priority,
+    tags:        tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+    status:      'open',
+    created_by:  meta ? meta.sender : 'unknown',
+    assigned_to: null,
+    done_by:     null,
+    created_at:  Date.now(),
+    updated_at:  Date.now(),
+    done_at:     null
+  }
+
+  tasks[id] = task
+  return { ok: true, task }
+}
+
+function _task_assign (tx, meta) {
+  const id   = parseInt(tx.id)
+  const to   = (tx.to || '').trim()
+  const task = tasks[id]
+
+  if (!task) return { error: 'not_found', id }
+  if (!to)   return { error: 'to_required' }
+  if (task.status === 'done') return { error: 'task_already_done' }
+
+  task.assigned_to = to
+  task.status      = 'assigned'
+  task.updated_at  = Date.now()
+
+  return { ok: true, task }
+}
+
+function _task_done (tx, meta) {
+  const id   = parseInt(tx.id)
+  const task = tasks[id]
+
+  if (!task) return { error: 'not_found', id }
+  if (task.status === 'done') return { error: 'task_already_done' }
+
+  task.status     = 'done'
+  task.done_by    = meta ? meta.sender : 'unknown'
+  task.done_at    = Date.now()
+  task.updated_at = Date.now()
+
+  return { ok: true, task }
+}
+
+function _task_list (tx) {
+  const status   = tx.status   || null
+  const priority = tx.priority || null
+  const assignee = tx.assignee || null
+  const limit    = Math.min(parseInt(tx.limit) || 20, 100)
+
+  let list = Object.values(tasks)
+
+  if (status)   list = list.filter(t => t.status === status)
+  if (priority) list = list.filter(t => t.priority === priority)
+  if (assignee) list = list.filter(t => t.assigned_to === assignee)
+
+  const p_order = { critical: 0, high: 1, normal: 2, low: 3 }
+  list.sort((a, b) => {
+    const pd = (p_order[a.priority] || 2) - (p_order[b.priority] || 2)
+    return pd !== 0 ? pd : b.created_at - a.created_at
+  })
+
+  return { ok: true, tasks: list.slice(0, limit), total: list.length }
+}
+
+function _task_get (tx) {
+  const id   = parseInt(tx.id)
+  const task = tasks[id]
+  if (!task) return { error: 'not_found', id }
+  return { ok: true, task }
+}
+
+module.exports = contract

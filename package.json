@@ -3,19 +3,15 @@
   "version": "1.0.0",
   "description": "P2P Task Coordinator built on Trac Network / Intercom",
   "main": "index.js",
-  "scripts": {
-    "start": "pear run . store1"
-  },
   "pear": {
     "name": "taskflow",
     "type": "terminal"
   },
   "dependencies": {
-    "trac-peer": "^1.0.0"
+    "trac-peer": "0.4.5"
   },
   "overrides": {
     "trac-wallet": "1.0.1"
   },
-  "keywords": ["trac", "intercom", "p2p", "tasks", "pear"],
   "license": "MIT"
 }

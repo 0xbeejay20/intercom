@@ -1,72 +1,40 @@
 'use strict'
 
-/**
- * TaskFlow — P2P Task Coordinator on Trac Network
- * Forked from https://github.com/Trac-Systems/intercom
- *
- * Run:
- *   pear run . store1
- *
- * First run (Bootstrap / admin):
- *   1. Choose option 1) to generate identity
- *   2. Copy your Peer Writer key (your contract address)
- *   3. Paste it into BOOTSTRAP_ADDRESS below
- *   4. /exit, then pear run . store1 again
- *   5. /add_admin --address <YourPeerAddress>
- *   6. /set_auto_add_writers --enabled 1   (to allow others to join)
- */
+const peer = require('trac-peer')
 
-// ─── CONFIGURE YOUR BOOTSTRAP ADDRESS HERE ───────────────────────────────────
-const BOOTSTRAP_ADDRESS = 'trac10sn2k6d3py0rswn5x2qsq5pk4waf7e5vxc048zp2lwq50r0j89tswu2net'
-const APP_CHANNEL = 'taskflow-main-v1'          // must be exactly 32 chars padded
-// ──────────────────────────────────────────────────────────────────────────────
+// ─── YOUR BOOTSTRAP ADDRESS (fill in after first run) ────────────────────────
+// Step 1: Run once, choose option 1), copy your Peer Writer key shown on screen
+// Step 2: Paste it below replacing REPLACE_WITH_YOUR_PEER_WRITER_KEY
+// Step 3: Run again - you are now the bootstrap admin
+const bootstrap = 'REPLACE_WITH_YOUR_PEER_WRITER_KEY'
+// ─────────────────────────────────────────────────────────────────────────────
 
-const Contract  = require('./contract/contract')
-const Protocol  = require('./contract/protocol')
+const peer_opts = {}
 
-// Peer / Trac runtime — resolved from the installed trac-peer package
-let TracPeer
-try {
-  TracPeer = require('trac-peer')
-} catch (_) {
-  console.error('[TaskFlow] Could not load trac-peer. Run: npm install')
-  process.exit(1)
-}
+// Bootstrap / contract address - your peer writer key from first run
+peer_opts.bootstrap = bootstrap
 
-async function main () {
-  const storeName = process.argv[2] || 'store1'
+// Subnet channel name - must be exactly 32 chars
+peer_opts.subnet_channel = 'taskflow-main-v1-0000000000000000'
 
-  const peer_opts = {
-    bootstrap: BOOTSTRAP_ADDRESS,
-    channel: APP_CHANNEL.padEnd(32, ' ').slice(0, 32),
-    store_name: storeName,
-    contract: new Contract(),
-    protocol: Protocol,
-    app_name: 'TaskFlow',
-    app_version: '1.0.0',
-    banner: `
-╔══════════════════════════════════════════════╗
-║  TaskFlow — P2P Task Coordinator             ║
-║  Built on Trac Network / Intercom            ║
-╚══════════════════════════════════════════════╝
+// App name shown in terminal
+peer_opts.app_name = 'TaskFlow'
 
-Commands:
-  /task_add    --title "..." [--desc "..."] [--priority low|normal|high|critical] [--tags "a,b"]
-  /task_assign --id <n> --to <peer_address>
-  /task_done   --id <n>
-  /task_list   [--status open|assigned|done] [--priority high] [--limit 20]
-  /task_get    --id <n>
+// Store name from CLI argument e.g. "store1"
+peer_opts.store_name = process.argv[2] || 'store1'
 
-Standard Intercom commands (chat, sidechannels, etc.) also available.
-Type /help for full command list.
-`
-  }
+// Load our custom contract
+peer_opts.contract = require('./contract/contract')
 
-  const peer = new TracPeer(peer_opts)
-  await peer.start()
-}
+// Load our custom protocol (commands)
+peer_opts.protocol = require('./contract/protocol')
 
-main().catch(err => {
-  console.error('[TaskFlow] Fatal:', err)
-  process.exit(1)
-})
+// Allow API access for transactions and messages
+peer_opts.api_tx_exposed = false
+peer_opts.api_msg_exposed = false
+
+// Enable logs
+peer_opts.enable_logs = true
+peer_opts.enable_txlogs = true
+
+peer(peer_opts)

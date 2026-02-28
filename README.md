@@ -36,7 +36,7 @@ npm install
 pear run . store1
 ```
 
-**First run only:** Choose option 1) → copy your Peer Writer key → paste it into `index.js` replacing `REPLACE_WITH_YOUR_PEER_WRITER_KEY` → type `/exit` → run again.
+**First run only:** Choose option 1) → copy your Peer Writer key → paste it into `index.js` replacing `trac10sn2k6d3py0rswn5x2qsq5pk4waf7e5vxc048zp2lwq50r0j89tswu2net` → type `/exit` → run again.
 
 ---
 
